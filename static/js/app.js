@@ -267,7 +267,10 @@ function setupEventListeners() {
 
     // Add sidebar tab click listeners
     document.querySelectorAll('.nav-tab').forEach(tab => {
-        tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+        tab.addEventListener('click', () => {
+            const tabName = tab.dataset.tab;
+            switchTab(tabName);
+        });
     });
 }
 
@@ -310,23 +313,6 @@ function submitIncident() {
 }
 
 /*
-// Tab switching
-function switchTab(tabName) {
-    // Update tab buttons
-    document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
-    event.target.classList.add('active');
-
-    // Update tab content
-    document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
-    document.getElementById(tabName + '-tab').classList.remove('hidden');
-
-    // Load data for analytics tab
-    if (tabName === 'analytics') {
-        updateAnalytics();
-    }
-}
-*/
-
 function switchTab(tabName) {
     // Remove active class from all tabs
     document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
@@ -337,6 +323,17 @@ function switchTab(tabName) {
     document.querySelectorAll('.tab-content').forEach(panel => panel.classList.add('hidden'));
     document.getElementById(tabName + '-tab').classList.remove('hidden');
     // Refresh analytics if needed
+    if (tabName === 'analytics') updateAnalytics();
+}
+*/
+
+function switchTab(tabName) {
+    document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelector(`.nav-tab[data-tab="${tabName}"]`).classList.add('active');
+
+    document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
+    document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+
     if (tabName === 'analytics') updateAnalytics();
 }
 
