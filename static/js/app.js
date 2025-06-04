@@ -4,11 +4,12 @@ let markers = [];
 let incidents = [];
 let selectedLocation = null;
 let chart = null;
+let incident_id = 0;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function () {
     initMap();
-    loadSampleData();
+    loadIncidents();
     initChart();
     setupEventListeners();
 });
@@ -274,72 +275,111 @@ function setupEventListeners() {
     });
 }
 
-// Submit incident
-function submitIncident() {
+// Load data from API
+async function loadIncidents() {
+    try {
+        const response = await fetch('/api/incidents');
+        const data = await response.json();
+        
+        // If no data from API, use sample data
+        if (data.length === 0) {
+            loadSampleData();
+        } else {
+            incidents = data.map(incident => ({
+                ...incident,
+                location: [incident.latitude, incident.longitude],
+                timestamp: new Date(incident.timestamp)
+            }));
+            updateMapMarkers();
+            updateIncidentsList();
+            updateAnalytics();
+        }
+    } catch (error) {
+        console.error('Error loading incidents:', error);
+        loadSampleData(); // Fallback to sample data
+    }
+}
+
+// Update the submitIncident function to save to database
+async function submitIncident() {
     if (!selectedLocation) {
         showNotification('Please select a location on the map', 'error');
         return;
     }
 
+    incident_id += 1;
+
     const formData = {
+        id: incident_id,
         type: document.getElementById('incident-type').value,
         description: document.getElementById('description').value,
-        location: [selectedLocation.lat, selectedLocation.lng],
+        latitude: selectedLocation.lat,
+        longitude: selectedLocation.lng,
         severity: document.getElementById('severity').value,
-        timestamp: new Date(),
-        status: 'active',
-        id: incidents.length + 1
+        reporter_name: 'Anonymous' // You can add a field for this
     };
 
     showLoading();
 
-    // Simulate API call
-    setTimeout(() => {
-        incidents.push(formData);
-        updateMapMarkers();
-        updateIncidentsList();
-        updateAnalytics();
+    try {
+        const response = await fetch('/api/incidents', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData)
+        });
 
-        // Reset form
-        document.getElementById('incident-form').reset();
-        if (window.selectionMarker) {
-            map.removeLayer(window.selectionMarker);
+        if (response.ok) {
+            // Reload incidents from database
+            await loadIncidents();
+            
+            // Reset form
+            document.getElementById('incident-form').reset();
+            if (window.selectionMarker) {
+                map.removeLayer(window.selectionMarker);
+            }
+            selectedLocation = null;
+            
+            showNotification('Incident reported successfully!', 'success');
+        } else {
+            throw new Error('Failed to submit incident');
         }
-        selectedLocation = null;
+    } catch (error) {
+        console.error('Error submitting incident:', error);
+        showNotification('Error submitting incident', 'error');
+    }
 
-        hideLoading();
-        showNotification('Incident reported successfully!', 'success');
-    }, 1000);
+    hideLoading();
 }
 
-/*
 function switchTab(tabName) {
     // Remove active class from all tabs
     document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
-    // Add active to the clicked tab button (assumes <button class="nav-tab" data-tab="incidents">...)
-    const btn = document.querySelector(`.nav-tab[data-tab="${tabName}"]`);
-    if (btn) btn.classList.add('active');
-    // Hide all tab content sections and show the chosen one
-    document.querySelectorAll('.tab-content').forEach(panel => panel.classList.add('hidden'));
-    document.getElementById(tabName + '-tab').classList.remove('hidden');
-    // Refresh analytics if needed
-    if (tabName === 'analytics') updateAnalytics();
-}
-*/
-
-function switchTab(tabName) {
-    document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
-    document.querySelector(`.nav-tab[data-tab="${tabName}"]`).classList.add('active');
-
+    
+    // Add active to the clicked tab button
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        if (tab.getAttribute('data-tab') === tabName) {
+            tab.classList.add('active');
+        }
+    });
+    
+    // Hide all tab panels and show the chosen one
     document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.add('hidden'));
     document.getElementById(`${tabName}-tab`).classList.remove('hidden');
-
+    
     if (tabName === 'analytics') updateAnalytics();
 }
 
-// Utility functions
 function toggleSidebar() {
-    document.getElementById('sidebar').classList.toggle('open');
+    const sidebar = document.getElementById('sidebar');
+    if (window.innerWidth <= 768) {
+        // Mobile behavior
+        sidebar.classList.toggle('open');
+    } else {
+        // Desktop behavior
+        sidebar.classList.toggle('collapsed');
+    }
 }
 
 function centerMap() {

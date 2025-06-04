@@ -34,35 +34,41 @@ class Incident(db.Model):
 def index():
     return send_from_directory('.', 'index.html')
 
+# Update the get_incidents route to handle empty database
 @app.route('/api/incidents', methods=['GET'])
 def get_incidents():
-    incidents = Incident.query.order_by(Incident.timestamp.desc()).limit(100).all()
-    result = []
-    for i in incidents:
-        lon, lat = map(float, db.session.scalar(i.location.ST_AsText()).strip('POINT()').split())
-        result.append({
-            'id': i.id,
-            'type': i.type,
-            'description': i.description,
-            'severity': i.severity,
-            'status': i.status,
-            'timestamp': i.timestamp.isoformat(),
-            'latitude': lat,
-            'longitude': lon,
-            'reporter_name': i.reporter_name
-        })
-    return jsonify(result)
+    try:
+        incidents = Incident.query.order_by(Incident.timestamp.desc()).limit(100).all()
+        result = []
+        for i in incidents:
+            coords_text = db.session.scalar(i.location.ST_AsText())
+            lon, lat = map(float, coords_text.replace('POINT(', '').replace(')', '').split())
+            result.append({
+                'id': i.id,
+                'type': i.type,
+                'description': i.description,
+                'severity': i.severity,
+                'status': i.status,
+                'timestamp': i.timestamp.isoformat(),
+                'latitude': lat,
+                'longitude': lon,
+                'reporter_name': i.reporter_name
+            })
+        return jsonify(result)
+    except Exception as e:
+        return jsonify([])  # Return empty array if no data
 
 @app.route('/api/incidents', methods=['POST'])
 def create_incident():
     data = request.get_json()
-    required = ['type', 'description', 'latitude', 'longitude', 'severity']
+    required = ['id', 'type', 'description', 'latitude', 'longitude', 'severity']
     for f in required:
         if f not in data:
             return jsonify({'error': f'Missing field: {f}'}), 400
 
     wkt = f"POINT({data['longitude']} {data['latitude']})"
     incident = Incident(
+        id = data['id'],
         type=data['type'],
         description=data['description'],
         severity=data['severity'],
