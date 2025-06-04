@@ -16,10 +16,11 @@ document.addEventListener('DOMContentLoaded', function () {
 // Initialize the map
 function initMap() {
     // Default to a university location (you can change coordinates)
-    map = L.map('map').setView([40.7589, -73.9851], 16);
+    map = L.map('map').setView([31.846120, 117.290306], 17);
 
     // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
         attribution: '© OpenStreetMap contributors'
     }).addTo(map);
 
@@ -59,7 +60,7 @@ function loadSampleData() {
             id: 1,
             type: 'traffic_accident',
             description: 'Minor collision at main entrance',
-            location: [40.7589, -73.9851],
+            location: [31.847120, 117.290306],
             severity: 'medium',
             timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
             status: 'active'
@@ -68,7 +69,7 @@ function loadSampleData() {
             id: 2,
             type: 'broken_facility',
             description: 'Broken water fountain in library',
-            location: [40.7599, -73.9841],
+            location: [31.846120, 117.290306],
             severity: 'low',
             timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
             status: 'resolved'
@@ -77,7 +78,7 @@ function loadSampleData() {
             id: 3,
             type: 'campus_activity',
             description: 'Student concert at main quad',
-            location: [40.7579, -73.9861],
+            location: [31.847120, 117.291306],
             severity: 'low',
             timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
             status: 'active'
@@ -86,7 +87,7 @@ function loadSampleData() {
             id: 4,
             type: 'road_block',
             description: 'Construction blocking north entrance',
-            location: [40.7605, -73.9835],
+            location: [31.848120, 117.290306],
             severity: 'high',
             timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
             status: 'active'
@@ -95,7 +96,7 @@ function loadSampleData() {
             id: 5,
             type: 'noise',
             description: 'Loud construction work near dormitory',
-            location: [40.7585, -73.9875],
+            location: [31.847120, 117.289306],
             severity: 'medium',
             timestamp: new Date(Date.now() - 30 * 60 * 1000),
             status: 'active'
@@ -263,6 +264,11 @@ function setupEventListeners() {
         e.preventDefault();
         submitIncident();
     });
+
+    // Add sidebar tab click listeners
+    document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
 }
 
 // Submit incident
@@ -303,6 +309,7 @@ function submitIncident() {
     }, 1000);
 }
 
+/*
 // Tab switching
 function switchTab(tabName) {
     // Update tab buttons
@@ -318,6 +325,20 @@ function switchTab(tabName) {
         updateAnalytics();
     }
 }
+*/
+
+function switchTab(tabName) {
+    // Remove active class from all tabs
+    document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+    // Add active to the clicked tab button (assumes <button class="nav-tab" data-tab="incidents">...)
+    const btn = document.querySelector(`.nav-tab[data-tab="${tabName}"]`);
+    if (btn) btn.classList.add('active');
+    // Hide all tab content sections and show the chosen one
+    document.querySelectorAll('.tab-content').forEach(panel => panel.classList.add('hidden'));
+    document.getElementById(tabName + '-tab').classList.remove('hidden');
+    // Refresh analytics if needed
+    if (tabName === 'analytics') updateAnalytics();
+}
 
 // Utility functions
 function toggleSidebar() {
@@ -325,7 +346,7 @@ function toggleSidebar() {
 }
 
 function centerMap() {
-    map.setView([40.7589, -73.9851], 16);
+    map.setView([31.846120, 117.290306], 17);
 }
 
 function toggleHeatmap() {
@@ -342,4 +363,20 @@ function formatTimeAgo(date) {
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     return `${diffDays}d ago`;
+}
+
+function showLoading() {
+    document.getElementById('loading').classList.remove('hidden');
+}
+
+function hideLoading() {
+    document.getElementById('loading').classList.add('hidden');
+}
+
+function showNotification(message, type) {
+    const notif = document.getElementById('notification');
+    notif.textContent = message;
+    notif.className = 'notification ' + type;
+    notif.classList.remove('hidden');
+    setTimeout(() => notif.classList.add('hidden'), 3000);
 }
