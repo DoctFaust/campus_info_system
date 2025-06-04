@@ -5,6 +5,9 @@ let incidents = [];
 let selectedLocation = null;
 let chart = null;
 let incident_id = 0;
+let analysisLayers = [];
+let incidentsVisible = true;
+let analysisVisible = true;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function () {
@@ -203,62 +206,6 @@ function updateIncidentsList() {
     });
 }
 
-// Update analytics
-function updateAnalytics() {
-    const total = incidents.length;
-    const active = incidents.filter(i => i.status === 'active').length;
-    const resolved = incidents.filter(i => i.status === 'resolved').length;
-
-    document.getElementById('total-incidents').textContent = total;
-    document.getElementById('active-incidents').textContent = active;
-    document.getElementById('resolved-incidents').textContent = resolved;
-
-    updateChart();
-}
-
-// Initialize chart
-function initChart() {
-    const ctx = document.getElementById('chart').getContext('2d');
-    chart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: [],
-            datasets: [{
-                data: [],
-                backgroundColor: [
-                    '#ff4444', '#ff8800', '#4CAF50', '#2196F3',
-                    '#9C27B0', '#795548', '#607D8B', '#f44336', '#9E9E9E'
-                ],
-                borderWidth: 2,
-                borderColor: '#fff'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            }
-        }
-    });
-}
-
-// Update chart
-function updateChart() {
-    const typeCounts = {};
-    incidents.forEach(incident => {
-        typeCounts[incident.type] = (typeCounts[incident.type] || 0) + 1;
-    });
-
-    chart.data.labels = Object.keys(typeCounts).map(type =>
-        type.replace('_', ' ').toUpperCase()
-    );
-    chart.data.datasets[0].data = Object.values(typeCounts);
-    chart.update();
-}
-
 // Setup event listeners
 function setupEventListeners() {
     document.getElementById('incident-form').addEventListener('submit', function (e) {
@@ -300,13 +247,14 @@ async function loadIncidents() {
     }
 }
 
-// Update the submitIncident function to save to database
+// Update the submitIncident function
 async function submitIncident() {
     if (!selectedLocation) {
         showNotification('Please select a location on the map', 'error');
         return;
     }
 
+    // Increment incident_id for each new incident
     incident_id += 1;
 
     const formData = {
@@ -316,7 +264,7 @@ async function submitIncident() {
         latitude: selectedLocation.lat,
         longitude: selectedLocation.lng,
         severity: document.getElementById('severity').value,
-        reporter_name: 'Anonymous' // You can add a field for this
+        reporter_name: 'Anonymous'
     };
 
     showLoading();
@@ -331,17 +279,18 @@ async function submitIncident() {
         });
 
         if (response.ok) {
-            // Reload incidents from database
-            await loadIncidents();
-            
-            // Reset form
+            // Reset form first
             document.getElementById('incident-form').reset();
             if (window.selectionMarker) {
                 map.removeLayer(window.selectionMarker);
             }
             selectedLocation = null;
             
-            showNotification('Incident reported successfully!', 'success');
+            // Reload incidents from database with a small delay
+            setTimeout(async () => {
+                await loadIncidents();
+                showNotification('Incident reported successfully!', 'success');
+            }, 500);
         } else {
             throw new Error('Failed to submit incident');
         }
@@ -379,6 +328,366 @@ function toggleSidebar() {
     } else {
         // Desktop behavior
         sidebar.classList.toggle('collapsed');
+    }
+}
+
+// Analysis popup functions
+function showAnalysisPopup(analysisType) {
+    const popup = document.getElementById('analysis-popup');
+    const title = document.getElementById('popup-title');
+    const content = document.getElementById('popup-content');
+    
+    popup.classList.remove('hidden');
+    
+    switch(analysisType) {
+        case 'statistics':
+            title.textContent = 'Statistics Analysis';
+            showStatisticsAnalysis(content);
+            break;
+        case 'charts':
+            title.textContent = 'Charts Analysis';
+            showChartsAnalysis(content);
+            break;
+        case 'clustering':
+            title.textContent = 'Clustering Analysis';
+            showClusteringAnalysis(content);
+            break;
+        case 'buffer':
+            title.textContent = 'Buffer Analysis';
+            showBufferAnalysis(content);
+            break;
+        case 'density':
+            title.textContent = 'Density Analysis';
+            showDensityAnalysis(content);
+            break;
+    }
+}
+
+function closeAnalysisPopup() {
+    document.getElementById('analysis-popup').classList.add('hidden');
+}
+
+// Statistics Analysis
+function showStatisticsAnalysis(container) {
+    const total = incidents.length;
+    const active = incidents.filter(i => i.status === 'active').length;
+    const resolved = incidents.filter(i => i.status === 'resolved').length;
+    const highSeverity = incidents.filter(i => i.severity === 'high' || i.severity === 'critical').length;
+    
+    // Calculate type distribution
+    const typeCounts = {};
+    incidents.forEach(i => {
+        typeCounts[i.type] = (typeCounts[i.type] || 0) + 1;
+    });
+    
+    const mostCommon = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0];
+    
+    container.innerHTML = `
+        <div class="analysis-result">
+            <h4>General Statistics</h4>
+            <div class="stat-row">
+                <span class="stat-label">Total Incidents:</span>
+                <span class="stat-value">${total}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Active Incidents:</span>
+                <span class="stat-value">${active}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Resolved Incidents:</span>
+                <span class="stat-value">${resolved}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">High Priority:</span>
+                <span class="stat-value">${highSeverity}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Most Common Type:</span>
+                <span class="stat-value">${mostCommon ? mostCommon[0].replace('_', ' ') : 'N/A'}</span>
+            </div>
+            <div class="stat-row">
+                <span class="stat-label">Resolution Rate:</span>
+                <span class="stat-value">${total > 0 ? Math.round((resolved/total)*100) : 0}%</span>
+            </div>
+        </div>
+    `;
+}
+
+// Charts Analysis
+function showChartsAnalysis(container) {
+    container.innerHTML = `
+        <div class="analysis-result">
+            <h4>Incident Distribution</h4>
+            <canvas id="popup-chart" class="analysis-chart"></canvas>
+        </div>
+        <div class="analysis-result">
+            <h4>Severity Distribution</h4>
+            <canvas id="severity-chart" class="analysis-chart"></canvas>
+        </div>
+    `;
+    
+    // Create charts
+    setTimeout(() => {
+        createPopupCharts();
+    }, 100);
+}
+
+// Clustering Analysis
+function showClusteringAnalysis(container) {
+    container.innerHTML = `
+        <div class="analysis-result">
+            <h4>Spatial Clustering</h4>
+            <p>Identifying incident hotspots using spatial clustering...</p>
+            <button class="btn" onclick="performClustering()">Run Clustering Analysis</button>
+            <div id="clustering-results"></div>
+        </div>
+    `;
+}
+
+// Buffer Analysis
+function showBufferAnalysis(container) {
+    container.innerHTML = `
+        <div class="analysis-result">
+            <h4>Buffer Zone Analysis</h4>
+            <p>Create buffer zones around high-priority incidents.</p>
+            <div class="form-group">
+                <label>Buffer Distance (meters):</label>
+                <input type="number" id="buffer-distance" value="100" min="50" max="500">
+            </div>
+            <button class="btn" onclick="performBufferAnalysis()">Create Buffer Zones</button>
+            <div id="buffer-results"></div>
+        </div>
+    `;
+}
+
+// Density Analysis
+function showDensityAnalysis(container) {
+    container.innerHTML = `
+        <div class="analysis-result">
+            <h4>Incident Density Heatmap</h4>
+            <p>Generate density heatmap of incident locations.</p>
+            <button class="btn" onclick="createDensityMap()">Generate Heatmap</button>
+            <div id="density-results"></div>
+        </div>
+    `;
+}
+
+// Enhanced toggle functions
+function toggleHeatmap() {
+    analysisVisible = !analysisVisible;
+    const btn = document.getElementById('heatmap-btn');
+    
+    analysisLayers.forEach(layer => {
+        if (analysisVisible) {
+            layer.addTo(map);
+            btn.style.background = 'rgba(76, 175, 80, 0.9)';
+            btn.style.color = 'white';
+        } else {
+            map.removeLayer(layer);
+            btn.style.background = 'rgba(255, 255, 255, 0.95)';
+            btn.style.color = '#333';
+        }
+    });
+    
+    showNotification(
+        analysisVisible ? 'Analysis results shown' : 'Analysis results hidden', 
+        'info'
+    );
+}
+
+function toggleIncidents() {
+    incidentsVisible = !incidentsVisible;
+    const btn = document.getElementById('incidents-btn');
+    
+    markers.forEach(marker => {
+        if (incidentsVisible) {
+            marker.addTo(map);
+            btn.style.background = 'rgba(76, 175, 80, 0.9)';
+            btn.style.color = 'white';
+        } else {
+            map.removeLayer(marker);
+            btn.style.background = 'rgba(255, 255, 255, 0.95)';
+            btn.style.color = '#333';
+        }
+    });
+    
+    showNotification(
+        incidentsVisible ? 'Incidents shown' : 'Incidents hidden', 
+        'info'
+    );
+}
+
+// Analysis implementation functions
+function performClustering() {
+    // Simple clustering based on proximity
+    const clusters = [];
+    const processed = new Set();
+    const clusterDistance = 0.001; // Adjust based on your coordinate system
+    
+    incidents.forEach((incident, i) => {
+        if (processed.has(i)) return;
+        
+        const cluster = [incident];
+        processed.add(i);
+        
+        incidents.forEach((other, j) => {
+            if (i !== j && !processed.has(j)) {
+                const distance = Math.sqrt(
+                    Math.pow(incident.location[0] - other.location[0], 2) +
+                    Math.pow(incident.location[1] - other.location[1], 2)
+                );
+                
+                if (distance < clusterDistance) {
+                    cluster.push(other);
+                    processed.add(j);
+                }
+            }
+        });
+        
+        if (cluster.length > 1) {
+            clusters.push(cluster);
+        }
+    });
+    
+    // Visualize clusters on map
+    clusters.forEach((cluster, i) => {
+        const centerLat = cluster.reduce((sum, inc) => sum + inc.location[0], 0) / cluster.length;
+        const centerLng = cluster.reduce((sum, inc) => sum + inc.location[1], 0) / cluster.length;
+        
+        const circle = L.circle([centerLat, centerLng], {
+            color: `hsl(${i * 60}, 70%, 50%)`,
+            fillColor: `hsl(${i * 60}, 70%, 50%)`,
+            fillOpacity: 0.3,
+            radius: 50
+        }).addTo(map);
+        
+        circle.bindPopup(`Cluster ${i + 1}: ${cluster.length} incidents`);
+        analysisLayers.push(circle);
+    });
+    
+    document.getElementById('clustering-results').innerHTML = `
+        <p>Found ${clusters.length} clusters with ${clusters.reduce((sum, c) => sum + c.length, 0)} incidents.</p>
+    `;
+}
+
+function performBufferAnalysis() {
+    const distance = parseInt(document.getElementById('buffer-distance').value);
+    const highPriorityIncidents = incidents.filter(i => 
+        i.severity === 'high' || i.severity === 'critical'
+    );
+    
+    // Clear existing buffers
+    analysisLayers.forEach(layer => map.removeLayer(layer));
+    analysisLayers = [];
+    
+    highPriorityIncidents.forEach(incident => {
+        const circle = L.circle(incident.location, {
+            color: '#ff4444',
+            fillColor: '#ff4444',
+            fillOpacity: 0.2,
+            radius: distance,
+            weight: 2
+        }).addTo(map);
+        
+        circle.bindPopup(`High Priority Buffer: ${incident.description}`);
+        analysisLayers.push(circle);
+    });
+    
+    document.getElementById('buffer-results').innerHTML = `
+        <p>Created ${highPriorityIncidents.length} buffer zones of ${distance}m radius.</p>
+    `;
+}
+
+function createDensityMap() {
+    // Simple density visualization using circles
+    const densityGrid = {};
+    const gridSize = 0.001;
+    
+    incidents.forEach(incident => {
+        const gridX = Math.floor(incident.location[0] / gridSize);
+        const gridY = Math.floor(incident.location[1] / gridSize);
+        const key = `${gridX},${gridY}`;
+        
+        densityGrid[key] = (densityGrid[key] || 0) + 1;
+    });
+    
+    // Clear existing density layers
+    analysisLayers.forEach(layer => map.removeLayer(layer));
+    analysisLayers = [];
+    
+    Object.entries(densityGrid).forEach(([key, count]) => {
+        const [gridX, gridY] = key.split(',').map(Number);
+        const lat = gridX * gridSize;
+        const lng = gridY * gridSize;
+        
+        const intensity = Math.min(count / 3, 1); // Normalize intensity
+        const circle = L.circle([lat, lng], {
+            color: `rgba(255, 68, 68, ${intensity})`,
+            fillColor: `rgba(255, 68, 68, ${intensity * 0.6})`,
+            fillOpacity: intensity * 0.6,
+            radius: 30 + (count * 10),
+            weight: 1
+        }).addTo(map);
+        
+        circle.bindPopup(`Density: ${count} incidents`);
+        analysisLayers.push(circle);
+    });
+    
+    document.getElementById('density-results').innerHTML = `
+        <p>Generated density map with ${Object.keys(densityGrid).length} density zones.</p>
+    `;
+}
+
+function createPopupCharts() {
+    // Type distribution chart
+    const typeCtx = document.getElementById('popup-chart');
+    if (typeCtx) {
+        const typeCounts = {};
+        incidents.forEach(incident => {
+            typeCounts[incident.type] = (typeCounts[incident.type] || 0) + 1;
+        });
+        
+        new Chart(typeCtx.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: Object.keys(typeCounts).map(type => type.replace('_', ' ').toUpperCase()),
+                datasets: [{
+                    data: Object.values(typeCounts),
+                    backgroundColor: ['#ff4444', '#ff8800', '#4CAF50', '#2196F3', '#9C27B0', '#795548', '#607D8B', '#f44336', '#9E9E9E']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+    }
+    
+    // Severity distribution chart
+    const severityCtx = document.getElementById('severity-chart');
+    if (severityCtx) {
+        const severityCounts = {};
+        incidents.forEach(incident => {
+            severityCounts[incident.severity] = (severityCounts[incident.severity] || 0) + 1;
+        });
+        
+        new Chart(severityCtx.getContext('2d'), {
+            type: 'bar',
+            data: {
+                labels: Object.keys(severityCounts).map(s => s.toUpperCase()),
+                datasets: [{
+                    data: Object.values(severityCounts),
+                    backgroundColor: ['#4CAF50', '#FF9800', '#FF5722', '#F44336']
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true } }
+            }
+        });
     }
 }
 

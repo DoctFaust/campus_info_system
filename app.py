@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-from sqlalchemy import func
+from sqlalchemy import func, text
 from geoalchemy2 import Geometry
 from datetime import datetime
 import os
@@ -91,6 +91,80 @@ def update_incident(incident_id):
         incident.description = data['description']
     db.session.commit()
     return jsonify({'message': 'Incident updated successfully'})
+
+@app.route('/api/analysis/clustering', methods=['GET'])
+def get_clustering_analysis():
+    # Using PostGIS for spatial clustering
+    query = text("""
+        SELECT 
+            ST_ClusterKMeans(location, 3) OVER() as cluster_id,
+            ST_X(location) as longitude,
+            ST_Y(location) as latitude,
+            type,
+            severity,
+            COUNT(*) OVER(PARTITION BY ST_ClusterKMeans(location, 3) OVER()) as cluster_size
+        FROM incidents
+        WHERE status = 'active'
+    """)
+    
+    result = db.session.execute(query)
+    clusters = {}
+    
+    for row in result:
+        cluster_id = row.cluster_id
+        if cluster_id not in clusters:
+            clusters[cluster_id] = {
+                'id': cluster_id,
+                'incidents': [],
+                'center': [0, 0],
+                'size': row.cluster_size
+            }
+        
+        clusters[cluster_id]['incidents'].append({
+            'longitude': row.longitude,
+            'latitude': row.latitude,
+            'type': row.type,
+            'severity': row.severity
+        })
+    
+    # Calculate cluster centers
+    for cluster in clusters.values():
+        if cluster['incidents']:
+            avg_lat = sum(inc['latitude'] for inc in cluster['incidents']) / len(cluster['incidents'])
+            avg_lng = sum(inc['longitude'] for inc in cluster['incidents']) / len(cluster['incidents'])
+            cluster['center'] = [avg_lat, avg_lng]
+    
+    return jsonify(list(clusters.values()))
+
+@app.route('/api/analysis/buffer/<int:distance>', methods=['GET'])
+def get_buffer_analysis(distance):
+    # Buffer analysis for high-priority incidents
+    query = text(f"""
+        SELECT 
+            id,
+            type,
+            description,
+            ST_X(location) as longitude,
+            ST_Y(location) as latitude,
+            ST_AsGeoJSON(ST_Buffer(location::geography, {distance})) as buffer_geom
+        FROM incidents 
+        WHERE severity IN ('high', 'critical') AND status = 'active'
+    """)
+    
+    result = db.session.execute(query)
+    buffers = []
+    
+    for row in result:
+        buffers.append({
+            'id': row.id,
+            'type': row.type,
+            'description': row.description,
+            'center': [row.latitude, row.longitude],
+            'buffer': row.buffer_geom,
+            'radius': distance
+        })
+    
+    return jsonify(buffers)
 
 @app.route('/api/upload', methods=['POST'])
 def upload_file():

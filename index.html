@@ -92,25 +92,37 @@
 
         <!-- Analytics Tab -->
         <div id="analytics-tab" class="tab-panel hidden">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-value" id="total-incidents">42</div>
-              <div class="stat-label">Total Incidents</div>
+          <div class="analytics-buttons">
+            <button class="analysis-btn" onclick="showAnalysisPopup('statistics')" data-analysis="statistics">
+              <i class="fas fa-chart-pie"></i> Statistics
+            </button>
+            <button class="analysis-btn" onclick="showAnalysisPopup('charts')" data-analysis="charts">
+              <i class="fas fa-chart-bar"></i> Charts
+            </button>
+            <button class="analysis-btn" onclick="showAnalysisPopup('clustering')" data-analysis="clustering">
+              <i class="fas fa-project-diagram"></i> Clustering
+            </button>
+            <button class="analysis-btn" onclick="showAnalysisPopup('buffer')" data-analysis="buffer">
+              <i class="fas fa-circle"></i> Buffer Analysis
+            </button>
+            <button class="analysis-btn" onclick="showAnalysisPopup('density')" data-analysis="density">
+              <i class="fas fa-fire"></i> Density Map
+            </button>
+          </div>
+          
+          <!-- Analysis Popup Window -->
+          <div id="analysis-popup" class="analysis-popup hidden">
+            <div class="popup-header">
+              <h3 id="popup-title">Analysis Results</h3>
+              <button class="popup-close" onclick="closeAnalysisPopup()">
+                <i class="fas fa-times"></i>
+              </button>
             </div>
-            <div class="stat-card">
-              <div class="stat-value" id="active-incidents">8</div>
-              <div class="stat-label">Active Today</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-value" id="resolved-incidents">34</div>
-              <div class="stat-label">Resolved</div>
+            <div class="popup-content" id="popup-content">
+              <!-- Analysis content will be loaded here -->
             </div>
           </div>
 
-          <div class="chart-container">
-            <h3>Incident Types Distribution</h3>
-            <canvas id="chart"></canvas>
-          </div>
         </div>
       </div>
     </div>
@@ -123,8 +135,11 @@
         <button class="control-btn" onclick="centerMap()" title="Center Map">
           <i class="fas fa-crosshairs"></i>
         </button>
-        <button class="control-btn" onclick="toggleHeatmap()" title="Toggle Heatmap">
+        <button class="control-btn" id="heatmap-btn" onclick="toggleHeatmap()" title="Toggle Analysis Results">
           <i class="fas fa-fire"></i>
+        </button>
+        <button class="control-btn" id="incidents-btn" onclick="toggleIncidents()" title="Toggle Incidents">
+          <i class="fas fa-exclamation-triangle"></i>
         </button>
       </div>
 
