@@ -109,7 +109,7 @@
               <i class="fas fa-fire"></i> Density Map
             </button>
           </div>
-          
+
           <!-- Analysis Popup Window -->
           <div id="analysis-popup" class="analysis-popup hidden">
             <div class="popup-header">
@@ -141,6 +141,18 @@
         <button class="control-btn" id="incidents-btn" onclick="toggleIncidents()" title="Toggle Incidents">
           <i class="fas fa-exclamation-triangle"></i>
         </button>
+        <button class="control-btn" id="filter-btn" onclick="showFilterPanel()" title="Filter Incidents">
+          <i class="fas fa-filter"></i>
+        </button>
+        <button class="control-btn" id="export-btn" onclick="exportData()" title="Export Data">
+          <i class="fas fa-download"></i>
+        </button>
+        <button class="control-btn" id="refresh-btn" onclick="refreshData()" title="Refresh Data">
+          <i class="fas fa-sync-alt"></i>
+        </button>
+        <button class="control-btn" id="search-btn" onclick="showSearchPanel()" title="Search Location">
+          <i class="fas fa-search"></i>
+        </button>
       </div>
 
       <div class="legend">
@@ -171,6 +183,49 @@
     </div>
   </div>
 
+  <!-- Filter Panel -->
+  <div id="filter-panel" class="floating-panel hidden">
+    <div class="panel-header">
+      <h4>Filter Incidents</h4>
+      <button class="panel-close" onclick="hideFilterPanel()">×</button>
+    </div>
+    <div class="panel-content">
+      <div class="filter-group">
+        <label>Status:</label>
+        <select id="status-filter">
+          <option value="">All</option>
+          <option value="active">Active</option>
+          <option value="resolved">Resolved</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Severity:</label>
+        <select id="severity-filter">
+          <option value="">All</option>
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+          <option value="critical">Critical</option>
+        </select>
+      </div>
+      <button class="btn btn-small" onclick="applyFilters()">Apply Filters</button>
+      <button class="btn btn-small" onclick="clearFilters()">Clear</button>
+    </div>
+  </div>
+
+  <!-- Search Panel -->
+  <div id="search-panel" class="floating-panel hidden">
+    <div class="panel-header">
+      <h4>Search Location</h4>
+      <button class="panel-close" onclick="hideSearchPanel()">×</button>
+    </div>
+    <div class="panel-content">
+      <input type="text" id="search-input" placeholder="Enter coordinates (lat, lng) or description">
+      <button class="btn btn-small" onclick="searchLocation()">Search</button>
+    </div>
+  </div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
   <script src="static/js/app.js"></script>
+</body>

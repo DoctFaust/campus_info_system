@@ -8,12 +8,12 @@ let incident_id = 0;
 let analysisLayers = [];
 let incidentsVisible = true;
 let analysisVisible = true;
+let filteredIncidents = [];
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function () {
     initMap();
     loadIncidents();
-    initChart();
     setupEventListeners();
 });
 
@@ -110,7 +110,6 @@ function loadSampleData() {
     incidents = sampleIncidents;
     updateMapMarkers();
     updateIncidentsList();
-    updateAnalytics();
 }
 
 // Update map markers
@@ -130,46 +129,105 @@ function updateMapMarkers() {
         'maintenance': '#2196F3',
         'other': '#9E9E9E'
     };
+    
+    const iconMap = {
+        'traffic_accident': '🚗',
+        'traffic_jam': '🚦',
+        'broken_facility': '🔧',
+        'noise': '🔊',
+        'road_block': '🚧',
+        'campus_activity': '🎉',
+        'security': '🛡️',
+        'maintenance': '⚙️',
+        'other': '❓'
+    };
 
     incidents.forEach(incident => {
         const color = colorMap[incident.type] || '#9E9E9E';
+        const icon = iconMap[incident.type] || '❓';
+        const size = incident.severity === 'critical' ? 35 : incident.severity === 'high' ? 30 : 25;
+        const pulseAnimation = incident.status === 'active' ? 'animation: pulse 2s infinite;' : '';
+        
         const marker = L.marker(incident.location, {
             icon: L.divIcon({
-                className: 'incident-marker',
-                html: `<div style="
-                        background: ${color};
-                        width: 20px;
-                        height: 20px;
-                        border-radius: 50%;
-                        border: 3px solid white;
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-                        ${incident.status === 'active' ? 'animation: pulse 2s infinite;' : 'opacity: 0.7;'}
-                    "></div>`,
-                iconSize: [26, 26],
-                iconAnchor: [13, 13]
+                className: 'custom-incident-marker',
+                html: `
+                    <div style="
+                        position: relative;
+                        width: ${size}px;
+                        height: ${size}px;
+                        ${pulseAnimation}
+                    ">
+                        <div style="
+                            position: absolute;
+                            top: 0;
+                            left: 0;
+                            width: 100%;
+                            height: 100%;
+                            background: ${color};
+                            border-radius: 50%;
+                            border: 3px solid white;
+                            box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: ${size * 0.4}px;
+                        ">${icon}</div>
+                        ${incident.severity === 'critical' ? `
+                            <div style="
+                                position: absolute;
+                                top: -2px;
+                                right: -2px;
+                                width: 12px;
+                                height: 12px;
+                                background: #ff0000;
+                                border-radius: 50%;
+                                border: 2px solid white;
+                                animation: pulse 1s infinite;
+                            "></div>
+                        ` : ''}
+                    </div>
+                `,
+                iconSize: [size, size],
+                iconAnchor: [size/2, size/2]
             })
         }).addTo(map);
 
         marker.bindPopup(`
-                <div style="min-width: 200px;">
-                    <h4 style="color: ${color}; margin-bottom: 8px;">
+            <div style="min-width: 220px; font-family: 'Segoe UI', sans-serif;">
+                <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                    <div style="font-size: 24px; margin-right: 10px;">${icon}</div>
+                    <h4 style="color: ${color}; margin: 0; flex: 1;">
                         ${incident.type.replace('_', ' ').toUpperCase()}
                     </h4>
-                    <p style="margin-bottom: 8px;">${incident.description}</p>
-                    <small style="color: #666;">
-                        ${incident.timestamp.toLocaleString()}
-                    </small>
-                    <div style="margin-top: 8px;">
-                        <span style="
-                            background: ${incident.status === 'active' ? '#4CAF50' : '#9E9E9E'};
-                            color: white;
-                            padding: 2px 8px;
-                            border-radius: 12px;
-                            font-size: 11px;
-                        ">${incident.status.toUpperCase()}</span>
-                    </div>
                 </div>
-            `);
+                <p style="margin: 8px 0; color: #333; line-height: 1.4;">${incident.description}</p>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin: 10px 0;">
+                    <span style="
+                        background: ${incident.severity === 'critical' ? '#ff0000' : 
+                                     incident.severity === 'high' ? '#ff5722' :
+                                     incident.severity === 'medium' ? '#ff9800' : '#4caf50'};
+                        color: white;
+                        padding: 3px 8px;
+                        border-radius: 12px;
+                        font-size: 11px;
+                        font-weight: bold;
+                    ">${incident.severity.toUpperCase()}</span>
+                    <span style="
+                        background: ${incident.status === 'active' ? '#4CAF50' : '#9E9E9E'};
+                        color: white;
+                        padding: 3px 8px;
+                        border-radius: 12px;
+                        font-size: 11px;
+                    ">${incident.status.toUpperCase()}</span>
+                </div>
+                <small style="color: #666; font-size: 11px;">
+                    📅 ${incident.timestamp.toLocaleString()}<br>
+                    📍 ${incident.location[0].toFixed(4)}, ${incident.location[1].toFixed(4)}
+                    ${incident.reporter_name ? `<br>👤 ${incident.reporter_name}` : ''}
+                </small>
+            </div>
+        `);
 
         markers.push(marker);
     });
@@ -232,14 +290,19 @@ async function loadIncidents() {
         if (data.length === 0) {
             loadSampleData();
         } else {
+            // Convert API data to frontend format
             incidents = data.map(incident => ({
-                ...incident,
+                id: incident.id,
+                type: incident.type,
+                description: incident.description,
                 location: [incident.latitude, incident.longitude],
-                timestamp: new Date(incident.timestamp)
+                severity: incident.severity,
+                status: incident.status,
+                timestamp: new Date(incident.timestamp),
+                reporter_name: incident.reporter_name || 'Anonymous'
             }));
             updateMapMarkers();
             updateIncidentsList();
-            updateAnalytics();
         }
     } catch (error) {
         console.error('Error loading incidents:', error);
@@ -329,6 +392,159 @@ function toggleSidebar() {
         // Desktop behavior
         sidebar.classList.toggle('collapsed');
     }
+}
+
+function showFilterPanel() {
+    document.getElementById('filter-panel').classList.remove('hidden');
+}
+
+function hideFilterPanel() {
+    document.getElementById('filter-panel').classList.add('hidden');
+}
+
+function applyFilters() {
+    const statusFilter = document.getElementById('status-filter').value;
+    const severityFilter = document.getElementById('severity-filter').value;
+    
+    filteredIncidents = incidents.filter(incident => {
+        const statusMatch = !statusFilter || incident.status === statusFilter;
+        const severityMatch = !severityFilter || incident.severity === severityFilter;
+        return statusMatch && severityMatch;
+    });
+    
+    // Update markers with filtered data
+    const originalIncidents = incidents;
+    incidents = filteredIncidents;
+    updateMapMarkers();
+    incidents = originalIncidents;
+    
+    showNotification(`Applied filters: ${filteredIncidents.length} incidents shown`, 'success');
+    hideFilterPanel();
+}
+
+function clearFilters() {
+    document.getElementById('status-filter').value = '';
+    document.getElementById('severity-filter').value = '';
+    updateMapMarkers();
+    showNotification('Filters cleared', 'info');
+    hideFilterPanel();
+}
+
+function exportData() {
+    const dataStr = JSON.stringify(incidents, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `campus_incidents_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showNotification('Data exported successfully', 'success');
+}
+
+function refreshData() {
+    showLoading();
+    loadIncidents().then(() => {
+        hideLoading();
+        showNotification('Data refreshed', 'success');
+    });
+}
+
+function showSearchPanel() {
+    document.getElementById('search-panel').classList.remove('hidden');
+}
+
+function hideSearchPanel() {
+    document.getElementById('search-panel').classList.add('hidden');
+}
+
+function searchLocation() {
+    const query = document.getElementById('search-input').value.trim();
+    if (!query) return;
+    
+    // Try to parse as coordinates
+    const coordMatch = query.match(/(-?\d+\.?\d*),\s*(-?\d+\.?\d*)/);
+    if (coordMatch) {
+        const lat = parseFloat(coordMatch[1]);
+        const lng = parseFloat(coordMatch[2]);
+        map.setView([lat, lng], 18);
+        
+        L.marker([lat, lng], {
+            icon: L.divIcon({
+                className: 'search-marker',
+                html: '<i class="fas fa-search" style="color: #2196F3; font-size: 20px;"></i>',
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            })
+        }).addTo(map).bindPopup('Search Result').openPopup();
+        
+        hideSearchPanel();
+        showNotification('Location found', 'success');
+    } else {
+        // Search in incident descriptions
+        const found = incidents.find(incident => 
+            incident.description.toLowerCase().includes(query.toLowerCase()) ||
+            incident.type.toLowerCase().includes(query.toLowerCase())
+        );
+        
+        if (found) {
+            map.setView(found.location, 18);
+            const marker = markers.find(m => 
+                m.getLatLng().lat === found.location[0] && 
+                m.getLatLng().lng === found.location[1]
+            );
+            if (marker) marker.openPopup();
+            hideSearchPanel();
+            showNotification('Incident found', 'success');
+        } else {
+            showNotification('No matching incidents found', 'error');
+        }
+    }
+}
+
+// Enhanced toggle functions
+function toggleHeatmap() {
+    analysisVisible = !analysisVisible;
+    const btn = document.getElementById('heatmap-btn');
+    
+    analysisLayers.forEach(layer => {
+        if (analysisVisible) {
+            layer.addTo(map);
+            btn.style.background = 'rgba(76, 175, 80, 0.9)';
+            btn.style.color = 'white';
+        } else {
+            map.removeLayer(layer);
+            btn.style.background = 'rgba(255, 255, 255, 0.95)';
+            btn.style.color = '#333';
+        }
+    });
+    
+    showNotification(
+        analysisVisible ? 'Analysis results shown' : 'Analysis results hidden', 
+        'info'
+    );
+}
+
+function toggleIncidents() {
+    incidentsVisible = !incidentsVisible;
+    const btn = document.getElementById('incidents-btn');
+    
+    markers.forEach(marker => {
+        if (incidentsVisible) {
+            marker.addTo(map);
+            btn.style.background = 'rgba(76, 175, 80, 0.9)';
+            btn.style.color = 'white';
+        } else {
+            map.removeLayer(marker);
+            btn.style.background = 'rgba(255, 255, 255, 0.95)';
+            btn.style.color = '#333';
+        }
+    });
+    
+    showNotification(
+        incidentsVisible ? 'Incidents shown' : 'Incidents hidden', 
+        'info'
+    );
 }
 
 // Analysis popup functions
@@ -472,51 +688,6 @@ function showDensityAnalysis(container) {
     `;
 }
 
-// Enhanced toggle functions
-function toggleHeatmap() {
-    analysisVisible = !analysisVisible;
-    const btn = document.getElementById('heatmap-btn');
-    
-    analysisLayers.forEach(layer => {
-        if (analysisVisible) {
-            layer.addTo(map);
-            btn.style.background = 'rgba(76, 175, 80, 0.9)';
-            btn.style.color = 'white';
-        } else {
-            map.removeLayer(layer);
-            btn.style.background = 'rgba(255, 255, 255, 0.95)';
-            btn.style.color = '#333';
-        }
-    });
-    
-    showNotification(
-        analysisVisible ? 'Analysis results shown' : 'Analysis results hidden', 
-        'info'
-    );
-}
-
-function toggleIncidents() {
-    incidentsVisible = !incidentsVisible;
-    const btn = document.getElementById('incidents-btn');
-    
-    markers.forEach(marker => {
-        if (incidentsVisible) {
-            marker.addTo(map);
-            btn.style.background = 'rgba(76, 175, 80, 0.9)';
-            btn.style.color = 'white';
-        } else {
-            map.removeLayer(marker);
-            btn.style.background = 'rgba(255, 255, 255, 0.95)';
-            btn.style.color = '#333';
-        }
-    });
-    
-    showNotification(
-        incidentsVisible ? 'Incidents shown' : 'Incidents hidden', 
-        'info'
-    );
-}
-
 // Analysis implementation functions
 function performClustering() {
     // Simple clustering based on proximity
@@ -572,30 +743,61 @@ function performClustering() {
 
 function performBufferAnalysis() {
     const distance = parseInt(document.getElementById('buffer-distance').value);
-    const highPriorityIncidents = incidents.filter(i => 
-        i.severity === 'high' || i.severity === 'critical'
-    );
-    
+
     // Clear existing buffers
     analysisLayers.forEach(layer => map.removeLayer(layer));
     analysisLayers = [];
     
-    highPriorityIncidents.forEach(incident => {
+    const colorMap = {
+        'traffic_accident': '#ff4444',
+        'traffic_jam': '#ff8800',
+        'broken_facility': '#9C27B0',
+        'noise': '#795548',
+        'road_block': '#607D8B',
+        'campus_activity': '#4CAF50',
+        'security': '#f44336',
+        'maintenance': '#2196F3',
+        'other': '#9E9E9E'
+    };
+    
+    const severityMultiplier = {
+        'low': 1,
+        'medium': 1.5,
+        'high': 2,
+        'critical': 3
+    };
+    
+    incidents.forEach(incident => {
+        const baseRadius = distance * (severityMultiplier[incident.severity] || 1);
+        const color = colorMap[incident.type] || '#9E9E9E';
+        
         const circle = L.circle(incident.location, {
-            color: '#ff4444',
-            fillColor: '#ff4444',
-            fillOpacity: 0.2,
-            radius: distance,
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.3,
+            radius: baseRadius,
             weight: 2
         }).addTo(map);
         
-        circle.bindPopup(`High Priority Buffer: ${incident.description}`);
+        circle.bindPopup(`
+            <strong>${incident.type.replace('_', ' ').toUpperCase()}</strong><br>
+            Severity: ${incident.severity}<br>
+            Buffer: ${baseRadius}m<br>
+            ${incident.description}
+        `);
         analysisLayers.push(circle);
     });
     
     document.getElementById('buffer-results').innerHTML = `
-        <p>Created ${highPriorityIncidents.length} buffer zones of ${distance}m radius.</p>
+        <p>Created ${incidents.length} buffer zones with radius based on severity (${distance}m base).</p>
+        <p>Use the <strong>Toggle Analysis</strong> button on the map to show/hide results.</p>
     `;
+    
+    // Update button state
+    const btn = document.getElementById('heatmap-btn');
+    btn.style.background = 'rgba(76, 175, 80, 0.9)';
+    btn.style.color = 'white';
+    analysisVisible = true;
 }
 
 function createDensityMap() {
@@ -659,7 +861,12 @@ function createPopupCharts() {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { position: 'bottom' } }
+                plugins: { 
+                    legend: { 
+                        position: 'bottom',
+                        labels: { boxWidth: 12, fontSize: 10 }
+                    } 
+                }
             }
         });
     }
@@ -685,7 +892,12 @@ function createPopupCharts() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
-                scales: { y: { beginAtZero: true } }
+                scales: { 
+                    y: { 
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    } 
+                }
             }
         });
     }
@@ -696,7 +908,34 @@ function centerMap() {
 }
 
 function toggleHeatmap() {
-    showNotification('Heatmap toggle feature coming soon!', 'info');
+    analysisVisible = !analysisVisible;
+    const btn = document.getElementById('heatmap-btn');
+    
+    if (analysisLayers.length === 0) {
+        showNotification('No analysis results to display. Run an analysis first.', 'info');
+        return;
+    }
+    
+    analysisLayers.forEach(layer => {
+        if (analysisVisible) {
+            if (!map.hasLayer(layer)) {
+                layer.addTo(map);
+            }
+            btn.style.background = 'rgba(76, 175, 80, 0.9)';
+            btn.style.color = 'white';
+        } else {
+            if (map.hasLayer(layer)) {
+                map.removeLayer(layer);
+            }
+            btn.style.background = 'rgba(255, 255, 255, 0.95)';
+            btn.style.color = '#333';
+        }
+    });
+    
+    showNotification(
+        analysisVisible ? 'Analysis results shown' : 'Analysis results hidden', 
+        'info'
+    );
 }
 
 function formatTimeAgo(date) {
