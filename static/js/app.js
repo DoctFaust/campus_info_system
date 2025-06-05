@@ -18,7 +18,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Initialize the map
 function initMap() {
-    // Default to a university location (you can change coordinates)
     map = L.map('map').setView([31.846120, 117.290306], 17);
 
     // Add OpenStreetMap tiles
@@ -60,48 +59,12 @@ function selectLocation(latlng) {
 function loadSampleData() {
     const sampleIncidents = [
         {
-            id: 1,
+            id: 0,
             type: 'traffic_accident',
             description: 'Minor collision at main entrance',
             location: [31.847120, 117.290306],
             severity: 'medium',
             timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-            status: 'active'
-        },
-        {
-            id: 2,
-            type: 'broken_facility',
-            description: 'Broken water fountain in library',
-            location: [31.846120, 117.290306],
-            severity: 'low',
-            timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-            status: 'resolved'
-        },
-        {
-            id: 3,
-            type: 'arts_activity',
-            description: 'Student concert at main quad',
-            location: [31.847120, 117.291306],
-            severity: 'low',
-            timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-            status: 'active'
-        },
-        {
-            id: 4,
-            type: 'road_block',
-            description: 'Construction blocking north entrance',
-            location: [31.848120, 117.290306],
-            severity: 'high',
-            timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000),
-            status: 'active'
-        },
-        {
-            id: 5,
-            type: 'noise',
-            description: 'Loud construction work near dormitory',
-            location: [31.847120, 117.289306],
-            severity: 'medium',
-            timestamp: new Date(Date.now() - 30 * 60 * 1000),
             status: 'active'
         }
     ];
@@ -118,27 +81,29 @@ function updateMapMarkers() {
     markers = [];
 
     const colorMap = {
-        'traffic_accident': '#ff4444',
-        'traffic_jam': '#ff8800',
-        'broken_facility': '#9C27B0',
-        'noise': '#795548',
-        'road_block': '#607D8B',
-        'campus_activity': '#4CAF50',
-        'security': '#f44336',
-        'maintenance': '#2196F3',
-        'other': '#9E9E9E'
+        '交通事故': '#f66262',
+        '交通堵塞': '#f9ab52',
+        '设施损坏': '#9b6dd4',
+        '噪声扰民': 'rgb(48, 255, 183)',
+        '道路施工': '#f1a8b1',
+        '文艺活动': '#53cae8',
+        '体育活动': '#1fc625',
+        '物品丢失': '#3f3cff',
+        '安全隐患': '#f82020',
+        '其它事件/活动': '#c5c7c5',
     };
     
     const iconMap = {
-        'traffic_accident': '🚗',
-        'traffic_jam': '🚦',
-        'broken_facility': '🔧',
-        'noise': '🔊',
-        'road_block': '🚧',
-        'campus_activity': '🎉',
-        'security': '🛡️',
-        'maintenance': '⚙️',
-        'other': '❓'
+        '交通事故': '🚗',
+        '交通堵塞': '🚦',
+        '设施损坏': '🔧',
+        '噪声扰民': '🔊',
+        '道路施工': '🚧',
+        '文艺活动': '🎉',
+        '体育活动': '⚽',
+        '物品丢失': '🔍',
+        '安全隐患': '🛡️',
+        '其它事件/活动': '📋',
     };
 
     incidents.forEach(incident => {
@@ -146,6 +111,13 @@ function updateMapMarkers() {
         const icon = iconMap[incident.type] || '❓';
         const size = incident.severity === 'critical' ? 35 : incident.severity === 'high' ? 30 : 25;
         const pulseAnimation = incident.status === 'active' ? 'animation: pulse 2s infinite;' : '';
+        let border_color = '#ffffff';
+        switch (incident.severity) {
+            case 'critical': border_color = '#ff0000'; break;
+            case 'high': border_color = '#ff5722'; break;
+            case 'medium': border_color = '#ff9800'; break;
+            case 'low': border_color = '#4caf50'; break;
+        }
         
         const marker = L.marker(incident.location, {
             icon: L.divIcon({
@@ -165,7 +137,7 @@ function updateMapMarkers() {
                             height: 100%;
                             background: ${color};
                             border-radius: 50%;
-                            border: 3px solid white;
+                            border: 3px solid ${border_color};
                             box-shadow: 0 3px 10px rgba(0,0,0,0.3);
                             display: flex;
                             align-items: center;
@@ -181,7 +153,7 @@ function updateMapMarkers() {
                                 height: 12px;
                                 background: #ff0000;
                                 border-radius: 50%;
-                                border: 2px solid white;
+                                border: 2px solid ${border_color};
                                 animation: pulse 1s infinite;
                             "></div>
                         ` : ''}
@@ -514,7 +486,7 @@ function searchLocation() {
                 iconSize: [30, 30],
                 iconAnchor: [15, 15]
             })
-        }).addTo(map).bindPopup('Search Result').openPopup();
+        }).addTo(map).bindPopup('查找结果').openPopup();
         
         hideSearchPanel();
         showNotification('Location found', 'success');
@@ -595,23 +567,23 @@ function showAnalysisPopup(analysisType) {
     
     switch(analysisType) {
         case 'statistics':
-            title.textContent = 'Statistics Analysis';
+            title.textContent = '统计信息';
             showStatisticsAnalysis(content);
             break;
         case 'charts':
-            title.textContent = 'Charts Analysis';
+            title.textContent = '统计图表';
             showChartsAnalysis(content);
             break;
         case 'clustering':
-            title.textContent = 'Clustering Analysis';
+            title.textContent = '聚类分析';
             showClusteringAnalysis(content);
             break;
         case 'buffer':
-            title.textContent = 'Buffer Analysis';
+            title.textContent = '缓冲区分析';
             showBufferAnalysis(content);
             break;
         case 'ellipse':
-            title.textContent = 'Ellipse Analysis';
+            title.textContent = '标准差椭圆';
             showEllipseAnalysis(content);
             break;
     }
@@ -638,29 +610,29 @@ function showStatisticsAnalysis(container) {
     
     container.innerHTML = `
         <div class="analysis-result">
-            <h4>General Statistics</h4>
+            <h4>综合统计数据</h4>
             <div class="stat-row">
-                <span class="stat-label">Total Incidents:</span>
+                <span class="stat-label">总事件/活动数量:</span>
                 <span class="stat-value">${total}</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label">Active Incidents:</span>
+                <span class="stat-label">进行中数量:</span>
                 <span class="stat-value">${active}</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label">Resolved Incidents:</span>
+                <span class="stat-label">已结束数量:</span>
                 <span class="stat-value">${resolved}</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label">High Priority:</span>
+                <span class="stat-label">高优先度事件("重要"或"高"等级)数量:</span>
                 <span class="stat-value">${highSeverity}</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label">Most Common Type:</span>
+                <span class="stat-label">最常见事件/活动类别:</span>
                 <span class="stat-value">${mostCommon ? mostCommon[0].replace('_', ' ') : 'N/A'}</span>
             </div>
             <div class="stat-row">
-                <span class="stat-label">Resolution Rate:</span>
+                <span class="stat-label">已结束比例:</span>
                 <span class="stat-value">${total > 0 ? Math.round((resolved/total)*100) : 0}%</span>
             </div>
         </div>
@@ -671,11 +643,11 @@ function showStatisticsAnalysis(container) {
 function showChartsAnalysis(container) {
     container.innerHTML = `
         <div class="analysis-result">
-            <h4>Incident Distribution</h4>
+            <h4>事件/活动种类分布</h4>
             <canvas id="popup-chart" class="analysis-chart"></canvas>
         </div>
         <div class="analysis-result">
-            <h4>Severity Distribution</h4>
+            <h4>事件/活动等级分布</h4>
             <canvas id="severity-chart" class="analysis-chart"></canvas>
         </div>
     `;
@@ -690,9 +662,9 @@ function showChartsAnalysis(container) {
 function showClusteringAnalysis(container) {
     container.innerHTML = `
         <div class="analysis-result">
-            <h4>Spatial Clustering</h4>
-            <p>Identifying incident hotspots using spatial clustering...</p>
-            <button class="btn" onclick="performClustering()">Run Clustering Analysis</button>
+            <h4>空间聚类分析</h4>
+            <p>利用空间聚类算法识别事件热点区域。</p>
+            <button class="btn" onclick="performClustering()">开始分析</button>
             <div id="clustering-results"></div>
         </div>
     `;
@@ -702,13 +674,13 @@ function showClusteringAnalysis(container) {
 function showBufferAnalysis(container) {
     container.innerHTML = `
         <div class="analysis-result">
-            <h4>Buffer Zone Analysis</h4>
-            <p>Create buffer zones around high-priority incidents.</p>
+            <h4>缓冲区分析</h4>
+            <p>为事件点创建缓冲区。</p>
             <div class="form-group">
-                <label>Buffer Distance (meters):</label>
-                <input type="number" id="buffer-distance" value="100" min="50" max="500">
+                <label>最小缓冲区半径(m):</label>
+                <input type="number" id="buffer-distance" value="30" min="50" max="500">
             </div>
-            <button class="btn" onclick="performBufferAnalysis()">Create Buffer Zones</button>
+            <button class="btn" onclick="performBufferAnalysis()">创建缓冲区</button>
             <div id="buffer-results"></div>
         </div>
     `;
@@ -718,9 +690,9 @@ function showBufferAnalysis(container) {
 function showEllipseAnalysis(container) {
     container.innerHTML = `
         <div class="analysis-result">
-            <h4>Incident Ellipse Heatmap</h4>
-            <p>Generate ellipse heatmap of incident locations.</p>
-            <button class="btn" onclick="createEllipseMap()">Generate Heatmap</button>
+            <h4>标准差椭圆</h4>
+            <p>创建各类别事件的标准差椭圆，指示其空间分布区域和趋势。</p>
+            <button class="btn" onclick="createEllipseMap()">生成标准差椭圆</button>
             <div id="ellipse-results"></div>
         </div>
     `;
@@ -731,7 +703,7 @@ function performClustering() {
     // Simple clustering based on proximity
     const clusters = [];
     const processed = new Set();
-    const clusterDistance = 0.001; // Adjust based on your coordinate system
+    const clusterDistance = 0.001; // Depends coordinate system
     
     incidents.forEach((incident, i) => {
         if (processed.has(i)) return;
@@ -770,12 +742,12 @@ function performClustering() {
             radius: 50
         }).addTo(map);
         
-        circle.bindPopup(`Cluster ${i + 1}: ${cluster.length} incidents`);
+        circle.bindPopup(`包含 ${i + 1}: ${cluster.length} 个事件点`);
         analysisLayers.push(circle);
     });
     
     document.getElementById('clustering-results').innerHTML = `
-        <p>Found ${clusters.length} clusters with ${clusters.reduce((sum, c) => sum + c.length, 0)} incidents.</p>
+        <p>共创建 ${clusters.length} 个聚类，包含 ${clusters.reduce((sum, c) => sum + c.length, 0)} 个事件点。</p>
     `;
 }
 
@@ -787,22 +759,23 @@ function performBufferAnalysis() {
     analysisLayers = [];
     
     const colorMap = {
-        'traffic_accident': '#ff4444',
-        'traffic_jam': '#ff8800',
-        'broken_facility': '#9C27B0',
-        'noise': '#795548',
-        'road_block': '#607D8B',
-        'campus_activity': '#4CAF50',
-        'security': '#f44336',
-        'maintenance': '#2196F3',
-        'other': '#9E9E9E'
+        '交通事故': '#f66262',
+        '交通堵塞': '#f9ab52',
+        '设施损坏': '#9b6dd4',
+        '噪声扰民': 'rgb(48, 255, 183)',
+        '道路施工': '#f1a8b1',
+        '文艺活动': '#53cae8',
+        '体育活动': '#1fc625',
+        '物品丢失': '#3f3cff',
+        '安全隐患': '#f82020',
+        '其它事件/活动': '#c5c7c5',
     };
     
     const severityMultiplier = {
         'low': 1,
         'medium': 1.5,
         'high': 2,
-        'critical': 3
+        'critical': 2.5
     };
     
     incidents.forEach(incident => {
@@ -819,16 +792,15 @@ function performBufferAnalysis() {
         
         circle.bindPopup(`
             <strong>${incident.type.replace('_', ' ').toUpperCase()}</strong><br>
-            Severity: ${incident.severity}<br>
-            Buffer: ${baseRadius}m<br>
+            等级: ${incident.severity}<br>
+            半径: ${baseRadius}m<br>
             ${incident.description}
         `);
         analysisLayers.push(circle);
     });
     
     document.getElementById('buffer-results').innerHTML = `
-        <p>Created ${incidents.length} buffer zones with radius based on severity (${distance}m base).</p>
-        <p>Use the <strong>Toggle Analysis</strong> button on the map to show/hide results.</p>
+        <p>创建了 ${incidents.length} 个缓冲区，大小和事件等级相关联，初始半径为 (${distance}m 。).</p>
     `;
     
     // Update button state
@@ -839,43 +811,197 @@ function performBufferAnalysis() {
 }
 
 function createEllipseMap() {
-    // Simple ellipse visualization using circles
-    const ellipseGrid = {};
-    const gridSize = 0.001;
-    
-    incidents.forEach(incident => {
-        const gridX = Math.floor(incident.location[0] / gridSize);
-        const gridY = Math.floor(incident.location[1] / gridSize);
-        const key = `${gridX},${gridY}`;
-        
-        ellipseGrid[key] = (ellipseGrid[key] || 0) + 1;
-    });
-    
     // Clear existing ellipse layers
     analysisLayers.forEach(layer => map.removeLayer(layer));
     analysisLayers = [];
     
-    Object.entries(ellipseGrid).forEach(([key, count]) => {
-        const [gridX, gridY] = key.split(',').map(Number);
-        const lat = gridX * gridSize;
-        const lng = gridY * gridSize;
+    // Color map for different incident types (same as your existing colorMap)
+    const colorMap = {
+        '交通事故': '#f66262',
+        '交通堵塞': '#f9ab52',
+        '设施损坏': '#9b6dd4',
+        '噪声扰民': 'rgb(48, 255, 183)',
+        '道路施工': '#f1a8b1',
+        '文艺活动': '#53cae8',
+        '体育活动': '#1fc625',
+        '物品丢失': '#3f3cff',
+        '安全隐患': '#f82020',
+        '其它事件/活动': '#c5c7c5',
+    };
+    
+    // Group incidents by type
+    const incidentsByType = {};
+    incidents.forEach(incident => {
+        if (!incidentsByType[incident.type]) {
+            incidentsByType[incident.type] = [];
+        }
+        incidentsByType[incident.type].push(incident);
+    });
+    
+    let ellipseCount = 0;
+    
+    // Create standard deviational ellipse for each incident type
+    Object.entries(incidentsByType).forEach(([type, typeIncidents]) => {
+        if (typeIncidents.length < 3) {
+            console.log(`Skipping ${type}: need at least 3 incidents for ellipse`);
+            return; // Need at least 3 points for meaningful ellipse
+        }
         
-        const intensity = Math.min(count / 3, 1); // Normalize intensity
-        const circle = L.circle([lat, lng], {
-            color: `rgba(255, 68, 68, ${intensity})`,
-            fillColor: `rgba(255, 68, 68, ${intensity * 0.6})`,
-            fillOpacity: intensity * 0.6,
-            radius: 30 + (count * 10),
-            weight: 1
+        const ellipseData = calculateStandardDeviationalEllipse(typeIncidents);
+        if (!ellipseData) return;
+        
+        const color = colorMap[type] || '#9E9E9E';
+        
+        // Create ellipse polygon
+        const ellipsePoints = generateEllipsePoints(
+            ellipseData.centerLat,
+            ellipseData.centerLng,
+            ellipseData.semiMajorAxis,
+            ellipseData.semiMinorAxis,
+            ellipseData.rotation
+        );
+        
+        const ellipse = L.polygon(ellipsePoints, {
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.2,
+            weight: 3,
+            opacity: 0.8,
+            dashArray: '5, 5'
         }).addTo(map);
         
-        circle.bindPopup(`Ellipse: ${count} incidents`);
-        analysisLayers.push(circle);
+        // Add popup with ellipse information
+        ellipse.bindPopup(`
+            <div style="font-family: 'Segoe UI', sans-serif; min-width: 200px;">
+                <h4 style="color: ${color}; margin: 0 0 10px 0;">
+                    ${type.replace('_', ' ').toUpperCase()}  空间分布
+                </h4>
+                <div style="font-size: 12px; line-height: 1.4;">
+                    <strong>事件数:</strong> ${typeIncidents.length}<br>
+                    <strong>分布中心:</strong> ${ellipseData.centerLat.toFixed(6)}, ${ellipseData.centerLng.toFixed(6)}<br>
+                    <strong>长轴:</strong> ${ellipseData.semiMajorAxis.toFixed(1)}m<br>
+                    <strong>短轴:</strong> ${ellipseData.semiMinorAxis.toFixed(1)}m<br>
+                    <strong>旋转角度:</strong> ${ellipseData.rotation.toFixed(1)}°
+                </div>
+            </div>
+        `);
+        
+        // Add center point marker
+        const centerMarker = L.circleMarker([ellipseData.centerLat, ellipseData.centerLng], {
+            color: color,
+            fillColor: color,
+            fillOpacity: 0.8,
+            radius: 6,
+            weight: 2
+        }).addTo(map);
+        
+        centerMarker.bindPopup(`Center of ${type.replace('_', ' ')} incidents`);
+        
+        analysisLayers.push(ellipse);
+        analysisLayers.push(centerMarker);
+        ellipseCount++;
     });
     
     document.getElementById('ellipse-results').innerHTML = `
-        <p>Generated ellipse map with ${Object.keys(ellipseGrid).length} ellipse zones.</p>
+        <p>生成了 ${ellipseCount} 个标准差椭圆。</p>
+        <p>每个椭圆代表一类事件的总体空间分布位置与趋势。</p>
     `;
+    
+    // Update button state
+    const btn = document.getElementById('heatmap-btn');
+    btn.style.background = 'rgba(76, 175, 80, 0.9)';
+    btn.style.color = 'white';
+    analysisVisible = true;
+    
+    showNotification(`Created ${ellipseCount} deviational ellipses`, 'success');
+}
+
+function calculateStandardDeviationalEllipse(incidents) {
+    if (incidents.length < 3) return null;
+    
+    // Calculate mean center
+    const meanLat = incidents.reduce((sum, inc) => sum + inc.location[0], 0) / incidents.length;
+    const meanLng = incidents.reduce((sum, inc) => sum + inc.location[1], 0) / incidents.length;
+    
+    // Convert to approximate meters for calculation (rough conversion for small areas)
+    const latToMeters = 111320; // meters per degree latitude (approximate)
+    const lngToMeters = Math.cos(meanLat * Math.PI / 180) * 111320; // meters per degree longitude
+    
+    // Calculate deviations from mean in meters
+    const deviations = incidents.map(inc => ({
+        x: (inc.location[1] - meanLng) * lngToMeters, // longitude deviation in meters
+        y: (inc.location[0] - meanLat) * latToMeters   // latitude deviation in meters
+    }));
+    
+    // Calculate variance-covariance matrix elements
+    const n = incidents.length;
+    let sumX2 = 0, sumY2 = 0, sumXY = 0;
+    
+    deviations.forEach(dev => {
+        sumX2 += dev.x * dev.x;
+        sumY2 += dev.y * dev.y;
+        sumXY += dev.x * dev.y;
+    });
+    
+    const varX = sumX2 / (n - 1);
+    const varY = sumY2 / (n - 1);
+    const covarXY = sumXY / (n - 1);
+    
+    // Calculate eigenvalues and eigenvectors for ellipse orientation
+    const trace = varX + varY;
+    const determinant = varX * varY - covarXY * covarXY;
+    const discriminant = Math.sqrt(trace * trace - 4 * determinant);
+    
+    const eigenvalue1 = (trace + discriminant) / 2;
+    const eigenvalue2 = (trace - discriminant) / 2;
+    
+    // Semi-axes lengths (1 standard deviation)
+    const semiMajorAxis = Math.sqrt(Math.max(eigenvalue1, eigenvalue2));
+    const semiMinorAxis = Math.sqrt(Math.min(eigenvalue1, eigenvalue2));
+    
+    // Rotation angle (in degrees)
+    let rotation = 0;
+    if (Math.abs(covarXY) > 1e-10) {
+        rotation = Math.atan2(2 * covarXY, varX - varY) / 2;
+        rotation = rotation * 180 / Math.PI; // Convert to degrees
+    }
+    
+    return {
+        centerLat: meanLat,
+        centerLng: meanLng,
+        semiMajorAxis: semiMajorAxis,
+        semiMinorAxis: semiMinorAxis,
+        rotation: rotation
+    };
+}
+
+function generateEllipsePoints(centerLat, centerLng, semiMajorAxis, semiMinorAxis, rotation, numPoints = 64) {
+    const points = [];
+    const rotationRad = rotation * Math.PI / 180;
+    
+    // Approximate conversion factors
+    const latToMeters = 111320;
+    const lngToMeters = Math.cos(centerLat * Math.PI / 180) * 111320;
+    
+    for (let i = 0; i < numPoints; i++) {
+        const angle = (2 * Math.PI * i) / numPoints;
+        
+        // Calculate point on ellipse in local coordinate system
+        const x = semiMajorAxis * Math.cos(angle);
+        const y = semiMinorAxis * Math.sin(angle);
+        
+        // Rotate the point
+        const rotatedX = x * Math.cos(rotationRad) - y * Math.sin(rotationRad);
+        const rotatedY = x * Math.sin(rotationRad) + y * Math.cos(rotationRad);
+        
+        // Convert back to lat/lng
+        const lat = centerLat + rotatedY / latToMeters;
+        const lng = centerLng + rotatedX / lngToMeters;
+        
+        points.push([lat, lng]);
+    }
+    
+    return points;
 }
 
 function createPopupCharts() {
@@ -893,7 +1019,7 @@ function createPopupCharts() {
                 labels: Object.keys(typeCounts).map(type => type.replace('_', ' ').toUpperCase()),
                 datasets: [{
                     data: Object.values(typeCounts),
-                    backgroundColor: ['#ff4444', '#ff8800', '#4CAF50', '#2196F3', '#9C27B0', '#795548', '#607D8B', '#f44336', '#9E9E9E']
+                    backgroundColor: ['#f66262','#f9ab52','#9b6dd4','rgb(48, 255, 183)','#f1a8b1','#53cae8','#1fc625','#3f3cff','#f82020','#c5c7c5']
                 }]
             },
             options: {
@@ -923,7 +1049,7 @@ function createPopupCharts() {
                 labels: Object.keys(severityCounts).map(s => s.toUpperCase()),
                 datasets: [{
                     data: Object.values(severityCounts),
-                    backgroundColor: ['#4CAF50', '#FF9800', '#FF5722', '#F44336']
+                    backgroundColor: ['#f66262','#f9ab52','#9b6dd4','rgb(48, 255, 183)','#f1a8b1','#53cae8','#1fc625','#3f3cff','#f82020','#c5c7c5']
                 }]
             },
             options: {

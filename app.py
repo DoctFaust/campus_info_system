@@ -6,7 +6,6 @@ from geoalchemy2 import Geometry
 from datetime import datetime
 import os
 
-# Configuration
 app = Flask(__name__)
 CORS(app)
 
@@ -17,7 +16,6 @@ app.config['UPLOAD_FOLDER'] = 'static/uploads'
 db = SQLAlchemy(app)
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# Models
 class Incident(db.Model):
     __tablename__ = 'incidents'
     id = db.Column(db.BigInteger, primary_key=True)
@@ -29,7 +27,6 @@ class Incident(db.Model):
     reporter_name = db.Column(db.String(64))
     location = db.Column(Geometry('POINT', srid=4326), nullable=False)
 
-# Routes
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
@@ -50,12 +47,11 @@ def get_incidents():
             try:
                 coords_text = db.session.scalar(i.location.ST_AsText())
                 print(f"Incident {i.id} coordinates: {coords_text}")  # Debug log
-                
+
                 # PostGIS returns POINT(longitude latitude)
                 coords_clean = coords_text.replace('POINT(', '').replace(')', '')
                 lon, lat = map(float, coords_clean.split())
-                
-                # Fix the timestamp issue - handle None values
+
                 timestamp_str = i.timestamp.isoformat() if i.timestamp else datetime.now().isoformat()
                 
                 incident_data = {
@@ -142,7 +138,6 @@ def create_incident():
 
     wkt = f"POINT({data['longitude']} {data['latitude']})"
     
-    # Explicitly set the timestamp
     incident = Incident(
         id=data['id'],
         type=data['type'],
@@ -150,7 +145,7 @@ def create_incident():
         severity=data['severity'],
         location=func.ST_GeomFromText(wkt, 4326),
         reporter_name=data.get('reporter_name', 'Anonymous'),
-        timestamp=datetime.now()  # Explicitly set timestamp
+        timestamp=datetime.now()
     )
     
     try:

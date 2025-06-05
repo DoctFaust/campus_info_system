@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh_cn">
 
 <head>
   <meta charset="UTF-8">
@@ -44,16 +44,16 @@
               <label for="incident-type">事件种类</label>
               <select id="incident-type" required>
                 <option value="">选择种类</option>
-                <option value="traffic_accident">交通事故</option>
-                <option value="traffic_jam">交通堵塞</option>
-                <option value="broken_facility">设施损坏</option>
-                <option value="noise">噪声扰民</option>
-                <option value="road_block">道路施工</option>
-                <option value="arts_activity">文艺活动</option>
-                <option value="phys_activity">体育活动</option>
-                <option value="security">安全隐患</option>
-                <option value="item_loss">物品丢失</option>
-                <option value="other">杂项</option>
+                <option value="交通事故">交通事故</option>
+                <option value="交通堵塞">交通堵塞</option>
+                <option value="设施损坏">设施损坏</option>
+                <option value="噪声扰民">噪声扰民</option>
+                <option value="道路施工">道路施工</option>
+                <option value="文艺活动">文艺活动</option>
+                <option value="体育活动">体育活动</option>
+                <option value="安全隐患">安全隐患</option>
+                <option value="物品丢失">物品丢失</option>
+                <option value="其它事件/活动">其它事件/活动</option>
               </select>
             </div>
 
@@ -111,7 +111,7 @@
           <!-- Analysis Popup Window -->
           <div id="analysis-popup" class="analysis-popup hidden">
             <div class="popup-header">
-              <h3 id="popup-title">Analysis Results</h3>
+              <h3 id="popup-title">分析结果</h3>
               <button class="popup-close" onclick="closeAnalysisPopup()">
                 <i class="fas fa-times"></i>
               </button>
@@ -149,29 +149,52 @@
         <button class="control-btn" id="search-btn" onclick="showSearchPanel()" title="Search Location">
           <i class="fas fa-search"></i>
         </button>
+        <button class="control-btn" id="source-code-btn" onclick="window.location.href='https://github.com/DoctFaust/campus_info_system/tree/main';" title="Source Code">
+          <i class="fas fa-terminal"></i>
+        </button>
       </div>
 
       <div class="legend">
-        <h4><i class="fas fa-info-circle"></i> Legend</h4>
+        <h4><i class="fas fa-info-circle"></i> 图例</h4>
         <div class="legend-item">
-          <div class="legend-color" style="background: #ff4444;"></div>
-          <span>Traffic Accidents</span>
+          <div class="legend-color" style="background: #f66262;"></div>
+          <span>交通事故</span>
         </div>
         <div class="legend-item">
-          <div class="legend-color" style="background: #ff8800;"></div>
-          <span>Traffic Jams</span>
+          <div class="legend-color" style="background: #f9ab52;"></div>
+          <span>交通堵塞</span>
         </div>
         <div class="legend-item">
-          <div class="legend-color" style="background: #4CAF50;"></div>
-          <span>Campus Activities</span>
+          <div class="legend-color" style="background: #9b6dd4;"></div>
+          <span>设施损坏</span>
         </div>
         <div class="legend-item">
-          <div class="legend-color" style="background: #2196F3;"></div>
-          <span>Maintenance</span>
+          <div class="legend-color" style="background: rgb(48, 255, 183);"></div>
+          <span>噪声扰民</span>
         </div>
         <div class="legend-item">
-          <div class="legend-color" style="background: #9C27B0;"></div>
-          <span>Other Issues</span>
+          <div class="legend-color" style="background: #f1a8b1;"></div>
+          <span>道路施工</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #53cae8;"></div>
+          <span>文艺活动</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #1fc625;"></div>
+          <span>体育活动</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #3f3cff;"></div>
+          <span>物品丢失</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #f82020;"></div>
+          <span>安全隐患</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #c5c7c5;"></div>
+          <span>其它事件/活动</span>
         </div>
       </div>
 
@@ -182,42 +205,42 @@
   <!-- Filter Panel -->
   <div id="filter-panel" class="floating-panel hidden">
     <div class="panel-header">
-      <h4>Filter Incidents</h4>
+      <h4>筛选事件</h4>
       <button class="panel-close" onclick="hideFilterPanel()">×</button>
     </div>
     <div class="panel-content">
       <div class="filter-group">
-        <label>Status:</label>
+        <label>状态:</label>
         <select id="status-filter">
-          <option value="">All</option>
-          <option value="active">Active</option>
-          <option value="resolved">Resolved</option>
+          <option value="">全部</option>
+          <option value="active">进行中</option>
+          <option value="resolved">结束</option>
         </select>
       </div>
       <div class="filter-group">
-        <label>Severity:</label>
+        <label>事件/活动等级:</label>
         <select id="severity-filter">
-          <option value="">All</option>
-          <option value="low">Low</option>
-          <option value="medium">Medium</option>
-          <option value="high">High</option>
-          <option value="critical">Critical</option>
+          <option value="">全部</option>
+          <option value="low">低</option>
+          <option value="medium">中</option>
+          <option value="high">高</option>
+          <option value="critical">重要</option>
         </select>
       </div>
-      <button class="btn btn-small" onclick="applyFilters()">Apply Filters</button>
-      <button class="btn btn-small" onclick="clearFilters()">Clear</button>
+      <button class="btn btn-small" onclick="applyFilters()">筛选</button>
+      <button class="btn btn-small" onclick="clearFilters()">重置</button>
     </div>
   </div>
 
   <!-- Search Panel -->
   <div id="search-panel" class="floating-panel hidden">
     <div class="panel-header">
-      <h4>Search Location</h4>
+      <h4>查找事件</h4>
       <button class="panel-close" onclick="hideSearchPanel()">×</button>
     </div>
     <div class="panel-content">
-      <input type="text" id="search-input" placeholder="Enter coordinates (lat, lng) or description">
-      <button class="btn btn-small" onclick="searchLocation()">Search</button>
+      <input type="text" id="search-input" placeholder="输入坐标(纬度, 经度)或按文字描述查找。">
+      <button class="btn btn-small" onclick="searchLocation()">搜索</button>
     </div>
   </div>
 
