@@ -25,7 +25,7 @@ class Incident(db.Model):
     description = db.Column(db.Text, nullable=False)
     severity = db.Column(db.String(16), nullable=False)
     status = db.Column(db.String(16), default='active')
-    timestamp = db.Column(db.DateTime, server_default=func.now())
+    timestamp = db.Column(db.DateTime, default=datetime.now, nullable=False)
     reporter_name = db.Column(db.String(64))
     location = db.Column(Geometry('POINT', srid=4326), nullable=False)
 
@@ -33,7 +33,7 @@ class Incident(db.Model):
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
-    
+
 @app.route('/api/incidents', methods=['GET'])
 def get_incidents():
     print("GET /api/incidents called")  # Debug log
@@ -55,13 +55,16 @@ def get_incidents():
                 coords_clean = coords_text.replace('POINT(', '').replace(')', '')
                 lon, lat = map(float, coords_clean.split())
                 
+                # Fix the timestamp issue - handle None values
+                timestamp_str = i.timestamp.isoformat() if i.timestamp else datetime.now().isoformat()
+                
                 incident_data = {
                     'id': i.id,
                     'type': i.type,
                     'description': i.description,
                     'severity': i.severity,
                     'status': i.status,
-                    'timestamp': i.timestamp.isoformat(),
+                    'timestamp': timestamp_str,
                     'latitude': lat,
                     'longitude': lon,
                     'reporter_name': i.reporter_name
@@ -138,17 +141,27 @@ def create_incident():
             return jsonify({'error': f'Missing field: {f}'}), 400
 
     wkt = f"POINT({data['longitude']} {data['latitude']})"
+    
+    # Explicitly set the timestamp
     incident = Incident(
         id=data['id'],
         type=data['type'],
         description=data['description'],
         severity=data['severity'],
         location=func.ST_GeomFromText(wkt, 4326),
-        reporter_name=data.get('reporter_name', 'Anonymous')
+        reporter_name=data.get('reporter_name', 'Anonymous'),
+        timestamp=datetime.now()  # Explicitly set timestamp
     )
-    db.session.add(incident)
-    db.session.commit()
-    return jsonify({'id': incident.id, 'message': 'Incident created successfully'}), 201
+    
+    try:
+        db.session.add(incident)
+        db.session.commit()
+        print(f"Successfully created incident {incident.id}")
+        return jsonify({'id': incident.id, 'message': 'Incident created successfully'}), 201
+    except Exception as e:
+        print(f"Error creating incident: {e}")
+        db.session.rollback()
+        return jsonify({'error': 'Failed to create incident'}), 500
 
 @app.route('/api/incidents/<int:incident_id>', methods=['PUT'])
 def update_incident(incident_id):
