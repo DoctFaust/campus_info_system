@@ -4,7 +4,6 @@ let markers = [];
 let incidents = [];
 let selectedLocation = null;
 let chart = null;
-let incident_id = 0;
 let analysisLayers = [];
 let incidentsVisible = true;
 let analysisVisible = true;
@@ -282,16 +281,46 @@ function setupEventListeners() {
 
 // Load data from API
 async function loadIncidents() {
+    console.log('Loading incidents from API...');
     try {
         const response = await fetch('/api/incidents');
+        console.log('API Response status:', response.status);
+        console.log('API Response headers:', response.headers);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
+        console.log('Raw API data:', data);
+        console.log('Data type:', typeof data);
+        console.log('Is array:', Array.isArray(data));
+        console.log('Number of incidents from API:', data.length);
+        
+        // Check if data is actually an array
+        if (!Array.isArray(data)) {
+            console.error('API returned non-array data:', data);
+            throw new Error('API returned invalid data format');
+        }
         
         // If no data from API, use sample data
         if (data.length === 0) {
+            console.log('No data from API, loading sample data');
             loadSampleData();
-        } else {
-            // Convert API data to frontend format
-            incidents = data.map(incident => ({
+            return;
+        }
+        
+        // Convert API data to frontend format
+        const newIncidents = data.map((incident, index) => {
+            console.log(`Processing incident ${index}:`, incident);
+            
+            // Validate required fields
+            if (!incident.latitude || !incident.longitude) {
+                console.error(`Invalid coordinates for incident ${incident.id}:`, incident);
+                return null;
+            }
+            
+            return {
                 id: incident.id,
                 type: incident.type,
                 description: incident.description,
@@ -300,28 +329,34 @@ async function loadIncidents() {
                 status: incident.status,
                 timestamp: new Date(incident.timestamp),
                 reporter_name: incident.reporter_name || 'Anonymous'
-            }));
-            updateMapMarkers();
-            updateIncidentsList();
-        }
+            };
+        }).filter(incident => incident !== null); // Remove invalid incidents
+        
+        console.log('Converted incidents:', newIncidents);
+        console.log('Number of valid converted incidents:', newIncidents.length);
+        
+        incidents = newIncidents;
+        console.log('incidents array updated, length:', incidents.length);
+        
+        updateMapMarkers();
+        updateIncidentsList();
+        console.log('Map markers and list updated');
+        
     } catch (error) {
         console.error('Error loading incidents:', error);
-        loadSampleData(); // Fallback to sample data
+        console.log('Falling back to sample data');
+        loadSampleData();
     }
 }
 
-// Update the submitIncident function
 async function submitIncident() {
     if (!selectedLocation) {
         showNotification('Please select a location on the map', 'error');
         return;
     }
 
-    // Increment incident_id for each new incident
-    incident_id += 1;
-
     const formData = {
-        id: incident_id,
+        id: Date.now() % 10000000,
         type: document.getElementById('incident-type').value,
         description: document.getElementById('description').value,
         latitude: selectedLocation.lat,
@@ -330,6 +365,7 @@ async function submitIncident() {
         reporter_name: 'Anonymous'
     };
 
+    console.log('Submitting incident:', formData);
     showLoading();
 
     try {
@@ -340,6 +376,7 @@ async function submitIncident() {
             },
             body: JSON.stringify(formData)
         });
+        console.log('Submit response status:', response.status);
 
         if (response.ok) {
             // Reset form first
@@ -349,6 +386,7 @@ async function submitIncident() {
             }
             selectedLocation = null;
             
+            console.log('Reloading incidents...');
             // Reload incidents from database with a small delay
             setTimeout(async () => {
                 await loadIncidents();
@@ -964,4 +1002,5 @@ function showNotification(message, type) {
     notif.className = 'notification ' + type;
     notif.classList.remove('hidden');
     setTimeout(() => notif.classList.add('hidden'), 3000);
+    console.log(`Notification: ${message} (${type})`);
 }

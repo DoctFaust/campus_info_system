@@ -20,7 +20,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 # Models
 class Incident(db.Model):
     __tablename__ = 'incidents'
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.BigInteger, primary_key=True)
     type = db.Column(db.String(64), nullable=False)
     description = db.Column(db.Text, nullable=False)
     severity = db.Column(db.String(16), nullable=False)
@@ -33,30 +33,101 @@ class Incident(db.Model):
 @app.route('/')
 def index():
     return send_from_directory('.', 'index.html')
-
-# Update the get_incidents route to handle empty database
+    
 @app.route('/api/incidents', methods=['GET'])
 def get_incidents():
+    print("GET /api/incidents called")  # Debug log
     try:
         incidents = Incident.query.order_by(Incident.timestamp.desc()).limit(100).all()
+        print(f"Found {len(incidents)} incidents in database")  # Debug log
+        
+        if len(incidents) == 0:
+            print("No incidents found in database")
+            return jsonify([])
+        
         result = []
         for i in incidents:
-            coords_text = db.session.scalar(i.location.ST_AsText())
-            lon, lat = map(float, coords_text.replace('POINT(', '').replace(')', '').split())
-            result.append({
-                'id': i.id,
-                'type': i.type,
-                'description': i.description,
-                'severity': i.severity,
-                'status': i.status,
-                'timestamp': i.timestamp.isoformat(),
-                'latitude': lat,
-                'longitude': lon,
-                'reporter_name': i.reporter_name
-            })
+            try:
+                coords_text = db.session.scalar(i.location.ST_AsText())
+                print(f"Incident {i.id} coordinates: {coords_text}")  # Debug log
+                
+                # PostGIS returns POINT(longitude latitude)
+                coords_clean = coords_text.replace('POINT(', '').replace(')', '')
+                lon, lat = map(float, coords_clean.split())
+                
+                incident_data = {
+                    'id': i.id,
+                    'type': i.type,
+                    'description': i.description,
+                    'severity': i.severity,
+                    'status': i.status,
+                    'timestamp': i.timestamp.isoformat(),
+                    'latitude': lat,
+                    'longitude': lon,
+                    'reporter_name': i.reporter_name
+                }
+                result.append(incident_data)
+                print(f"Processed incident {i.id}: {incident_data}")  # Debug log
+                
+            except Exception as e:
+                print(f"Error processing incident {i.id}: {e}")
+                continue
+        
+        print(f"Returning {len(result)} incidents")  # Debug log
         return jsonify(result)
+        
     except Exception as e:
-        return jsonify([])  # Return empty array if no data
+        print(f"Error in get_incidents: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify([]), 500  # Return empty array with error status
+
+@app.route('/api/debug/incidents', methods=['GET'])
+def debug_incidents():
+    try:
+        count = Incident.query.count()
+        print(f"Total incidents in DB: {count}")
+        
+        if count > 0:
+            latest = Incident.query.order_by(Incident.timestamp.desc()).first()
+            return jsonify({
+                'total_count': count,
+                'latest_incident': {
+                    'id': latest.id,
+                    'type': latest.type,
+                    'description': latest.description,
+                    'timestamp': latest.timestamp.isoformat()
+                }
+            })
+        else:
+            return jsonify({'total_count': 0, 'message': 'No incidents in database'})
+            
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+@app.route('/api/test/db', methods=['GET'])
+def test_db():
+    try:
+        # Test basic database connection
+        result = db.session.execute('SELECT 1 as test').fetchone()
+        
+        # Test incidents table exists
+        table_check = db.session.execute("""
+            SELECT table_name FROM information_schema.tables 
+            WHERE table_name = 'incidents'
+        """).fetchone()
+        
+        # Count incidents
+        count = db.session.execute('SELECT COUNT(*) FROM incidents').scalar()
+        
+        return jsonify({
+            'db_connection': 'OK' if result else 'FAILED',
+            'incidents_table_exists': bool(table_check),
+            'incidents_count': count
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)})
 
 @app.route('/api/incidents', methods=['POST'])
 def create_incident():
@@ -68,7 +139,7 @@ def create_incident():
 
     wkt = f"POINT({data['longitude']} {data['latitude']})"
     incident = Incident(
-        id = data['id'],
+        id=data['id'],
         type=data['type'],
         description=data['description'],
         severity=data['severity'],
