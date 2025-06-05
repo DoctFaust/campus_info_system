@@ -79,7 +79,7 @@ function loadSampleData() {
         },
         {
             id: 3,
-            type: 'campus_activity',
+            type: 'arts_activity',
             description: 'Student concert at main quad',
             location: [31.847120, 117.291306],
             severity: 'low',
@@ -610,9 +610,9 @@ function showAnalysisPopup(analysisType) {
             title.textContent = 'Buffer Analysis';
             showBufferAnalysis(content);
             break;
-        case 'density':
-            title.textContent = 'Density Analysis';
-            showDensityAnalysis(content);
+        case 'ellipse':
+            title.textContent = 'Ellipse Analysis';
+            showEllipseAnalysis(content);
             break;
     }
 }
@@ -714,14 +714,14 @@ function showBufferAnalysis(container) {
     `;
 }
 
-// Density Analysis
-function showDensityAnalysis(container) {
+// Ellipse Analysis
+function showEllipseAnalysis(container) {
     container.innerHTML = `
         <div class="analysis-result">
-            <h4>Incident Density Heatmap</h4>
-            <p>Generate density heatmap of incident locations.</p>
-            <button class="btn" onclick="createDensityMap()">Generate Heatmap</button>
-            <div id="density-results"></div>
+            <h4>Incident Ellipse Heatmap</h4>
+            <p>Generate ellipse heatmap of incident locations.</p>
+            <button class="btn" onclick="createEllipseMap()">Generate Heatmap</button>
+            <div id="ellipse-results"></div>
         </div>
     `;
 }
@@ -838,9 +838,9 @@ function performBufferAnalysis() {
     analysisVisible = true;
 }
 
-function createDensityMap() {
-    // Simple density visualization using circles
-    const densityGrid = {};
+function createEllipseMap() {
+    // Simple ellipse visualization using circles
+    const ellipseGrid = {};
     const gridSize = 0.001;
     
     incidents.forEach(incident => {
@@ -848,14 +848,14 @@ function createDensityMap() {
         const gridY = Math.floor(incident.location[1] / gridSize);
         const key = `${gridX},${gridY}`;
         
-        densityGrid[key] = (densityGrid[key] || 0) + 1;
+        ellipseGrid[key] = (ellipseGrid[key] || 0) + 1;
     });
     
-    // Clear existing density layers
+    // Clear existing ellipse layers
     analysisLayers.forEach(layer => map.removeLayer(layer));
     analysisLayers = [];
     
-    Object.entries(densityGrid).forEach(([key, count]) => {
+    Object.entries(ellipseGrid).forEach(([key, count]) => {
         const [gridX, gridY] = key.split(',').map(Number);
         const lat = gridX * gridSize;
         const lng = gridY * gridSize;
@@ -869,12 +869,12 @@ function createDensityMap() {
             weight: 1
         }).addTo(map);
         
-        circle.bindPopup(`Density: ${count} incidents`);
+        circle.bindPopup(`Ellipse: ${count} incidents`);
         analysisLayers.push(circle);
     });
     
-    document.getElementById('density-results').innerHTML = `
-        <p>Generated density map with ${Object.keys(densityGrid).length} density zones.</p>
+    document.getElementById('ellipse-results').innerHTML = `
+        <p>Generated ellipse map with ${Object.keys(ellipseGrid).length} ellipse zones.</p>
     `;
 }
 

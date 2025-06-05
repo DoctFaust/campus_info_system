@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Campus Info Hub</title>
+  <title>校园信息可视化共享平台</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
   <link rel="stylesheet" href="static/css/style.css" />
@@ -20,19 +20,19 @@
   <div class="container">
     <div class="sidebar" id="sidebar">
       <div class="header">
-        <h1><i class="fas fa-university"></i> Campus Info Hub</h1>
-        <p>Report & Track Campus Incidents</p>
+        <h1><i class="fas fa-university"></i>校园信息共享平台</h1>
+        <p>实时共享校园中的事件和活动</p>
       </div>
 
       <div class="nav-tabs">
         <button class="nav-tab active" data-tab="report" onclick="switchTab('report')">
-          <i class="fas fa-plus-circle"></i> Report
+          <i class="fas fa-plus-circle"></i> 上传事件
         </button>
         <button class="nav-tab" data-tab="incidents" onclick="switchTab('incidents')">
-          <i class="fas fa-list"></i> Incidents
+          <i class="fas fa-list"></i> 事件列表
         </button>
         <button class="nav-tab" data-tab="analytics" onclick="switchTab('analytics')">
-          <i class="fas fa-chart-bar"></i> Analytics
+          <i class="fas fa-chart-bar"></i> 分析工具
         </button>
       </div>
 
@@ -41,72 +41,70 @@
         <div id="report-tab" class="tab-panel">
           <form id="incident-form">
             <div class="form-group">
-              <label for="incident-type">Incident Type</label>
+              <label for="incident-type">事件种类</label>
               <select id="incident-type" required>
-                <option value="">Select Type</option>
-                <option value="traffic_accident">Traffic Accident</option>
-                <option value="traffic_jam">Traffic Jam</option>
-                <option value="broken_facility">Broken Facility</option>
-                <option value="noise">Noise Disturbance</option>
-                <option value="road_block">Road Block</option>
-                <option value="campus_activity">Campus Activity</option>
-                <option value="security">Security Issue</option>
-                <option value="maintenance">Maintenance</option>
-                <option value="other">Other</option>
+                <option value="">选择种类</option>
+                <option value="traffic_accident">交通事故</option>
+                <option value="traffic_jam">交通堵塞</option>
+                <option value="broken_facility">设施损坏</option>
+                <option value="noise">噪声扰民</option>
+                <option value="road_block">道路施工</option>
+                <option value="arts_activity">文艺活动</option>
+                <option value="phys_activity">体育活动</option>
+                <option value="security">安全隐患</option>
+                <option value="item_loss">物品丢失</option>
+                <option value="other">杂项</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label for="description">Description</label>
-              <textarea id="description" rows="3" placeholder="Describe the incident..." required></textarea>
+              <label for="description">事件描述</label>
+              <textarea id="description" rows="3" placeholder="在这里简单描述事件/活动..." required></textarea>
             </div>
 
             <div class="form-group">
-              <label for="location">Location</label>
-              <input type="text" id="location" placeholder="Click on map or enter location" required readonly>
+              <label for="location">发生位置</label>
+              <input type="text" id="location" placeholder="点击地图，或直接输入纬度和经度" required readonly>
             </div>
 
             <div class="form-group">
-              <label for="severity">Severity</label>
+              <label for="severity">事件/活动等级</label>
               <select id="severity" required>
-                <option value="">Select Severity</option>
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-                <option value="critical">Critical</option>
+                <option value="">大概评估此事件/活动的影响力</option>
+                <option value="low">低（如：教室门窗损坏、宿舍楼施工）</option>
+                <option value="medium">中（如：学院组织活动、道路堵塞）</option>
+                <option value="high">高（如：学校运动会、身份证丢失）</option>
+                <option value="critical">重要（如：高级别学术会议、较严重交通事故）</option>
               </select>
             </div>
 
             <button type="submit" class="btn btn-full">
-              <i class="fas fa-paper-plane"></i> Report Incident
+              <i class="fas fa-paper-plane"></i> 提交事件
             </button>
           </form>
         </div>
 
         <!-- Incidents Tab -->
         <div id="incidents-tab" class="tab-panel hidden">
-          <div id="incidents-list">
-            <!-- Incidents will be loaded here -->
-          </div>
+          <div id="incidents-list"></div>
         </div>
 
-        <!-- Analytics Tab -->
         <div id="analytics-tab" class="tab-panel hidden">
           <div class="analytics-buttons">
             <button class="analysis-btn" onclick="showAnalysisPopup('statistics')" data-analysis="statistics">
-              <i class="fas fa-chart-pie"></i> Statistics
+              <i class="fas fa-chart-pie"></i> 统计数据
             </button>
             <button class="analysis-btn" onclick="showAnalysisPopup('charts')" data-analysis="charts">
-              <i class="fas fa-chart-bar"></i> Charts
+              <i class="fas fa-chart-bar"></i> 统计图表
             </button>
             <button class="analysis-btn" onclick="showAnalysisPopup('clustering')" data-analysis="clustering">
-              <i class="fas fa-project-diagram"></i> Clustering
+              <i class="fas fa-project-diagram"></i> 聚类分析
             </button>
             <button class="analysis-btn" onclick="showAnalysisPopup('buffer')" data-analysis="buffer">
-              <i class="fas fa-circle"></i> Buffer Analysis
+              <i class="fas fa-bullseye"></i> 缓冲区分析
             </button>
-            <button class="analysis-btn" onclick="showAnalysisPopup('density')" data-analysis="density">
-              <i class="fas fa-fire"></i> Density Map
+            <button class="analysis-btn" onclick="showAnalysisPopup('ellipse')" data-analysis="ellipse">
+              <i class="fas fa-circle"></i> 标准差椭圆
             </button>
           </div>
 
@@ -118,9 +116,7 @@
                 <i class="fas fa-times"></i>
               </button>
             </div>
-            <div class="popup-content" id="popup-content">
-              <!-- Analysis content will be loaded here -->
-            </div>
+            <div class="popup-content" id="popup-content"></div>
           </div>
 
         </div>

@@ -244,9 +244,11 @@ body {
 
 .analysis-popup {
   position: fixed;
-  top: 20px;
-  right: 20px;
-  width: 400px;
+  top: 60%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 345px;
+  height: 78%;
   max-width: 90vw;
   max-height: 80vh;
   background: rgba(255, 255, 255, 0.95);
@@ -256,13 +258,16 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.3);
   z-index: 2000;
   transition: all 0.3s ease;
-  transform: translateX(100%);
+  opacity: 0;
+  visibility: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .analysis-popup:not(.hidden) {
-  transform: translateX(0);
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, -50%) scale(1);
 }
 
 .popup-header {
